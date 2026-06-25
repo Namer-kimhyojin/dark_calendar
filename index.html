@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dark Calendar — 바탕화면 위의 스마트 캘린더</title>
+  <meta name="description" content="캘린더를 열 필요 없이, 일정이 항상 바탕화면에 있습니다. Dark Calendar는 구글 캘린더와 실시간 동기화되는 Windows 오버레이 캘린더 앱입니다." />
+  <meta property="og:title" content="Dark Calendar — 바탕화면 위의 스마트 캘린더" />
+  <meta property="og:description" content="캘린더를 열 필요 없이, 일정이 항상 바탕화면에 있습니다." />
+  <meta property="og:image" content="https://store-images.s-microsoft.com/image/apps.23945.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.4d072718-c86d-4f46-af2f-8575f5ae2fe0" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─── RESET & BASE ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:         #0a0a0f;
+      --bg2:        #111118;
+      --bg3:        #18181f;
+      --surface:    #1e1e28;
+      --border:     rgba(255,255,255,0.07);
+      --accent:     #6c63ff;
+      --accent2:    #a78bfa;
+      --accent3:    #38bdf8;
+      --text:       #e8e8f0;
+      --text-muted: #8888a8;
+      --radius-md:  14px;
+      --radius-lg:  22px;
+      --radius-xl:  32px;
+      --transition: 0.35s cubic-bezier(.4,0,.2,1);
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Noto Sans KR', 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 99px; }
+
+    /* ─── UTILITY ─── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+    .section-eyebrow {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.15em;
+      text-transform: uppercase; color: var(--accent2);
+      margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(1.9rem, 4vw, 2.8rem);
+      font-weight: 800; line-height: 1.2;
+      color: #fff; margin-bottom: 56px;
+    }
+    .section-header { text-align: center; }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 13px 26px; border-radius: 99px;
+      font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 0.95rem;
+      cursor: pointer; transition: var(--transition); white-space: nowrap;
+      border: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent) 0%, #4f46e5 100%);
+      color: #fff;
+      box-shadow: 0 4px 32px rgba(108,99,255,0.45);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(108,99,255,0.6);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text); border: 1px solid var(--border);
+      backdrop-filter: blur(8px);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.11); }
+    .btn-large { padding: 17px 36px; font-size: 1.05rem; }
+    .btn-nav {
+      background: rgba(108,99,255,0.15);
+      color: var(--accent2); border: 1px solid rgba(108,99,255,0.25);
+      padding: 9px 18px; font-size: 0.85rem;
+    }
+    .btn-nav:hover { background: rgba(108,99,255,0.28); }
+    .btn-nav svg { flex-shrink: 0; }
+
+    /* ─── NAVBAR ─── */
+    .navbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 0;
+      transition: background var(--transition), backdrop-filter var(--transition), box-shadow var(--transition);
+    }
+    .navbar.scrolled {
+      background: rgba(10,10,15,0.85);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 1px 0 var(--border);
+    }
+    .nav-inner {
+      max-width: 1140px; margin: 0 auto; padding: 18px 24px;
+      display: flex; align-items: center; gap: 32px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 800; color: #fff;
+      flex-shrink: 0;
+    }
+    .logo-icon { font-size: 1.3rem; }
+    .nav-links {
+      display: flex; list-style: none; gap: 28px; margin-left: auto;
+    }
+    .nav-links a {
+      font-family: 'Outfit', sans-serif; font-size: 0.9rem; font-weight: 500;
+      color: var(--text-muted); transition: color var(--transition);
+    }
+    .nav-links a:hover { color: #fff; }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100vh;
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+      padding: 120px 60px 80px;
+      max-width: 1200px; margin: 0 auto;
+      position: relative;
+    }
+    .hero-bg {
+      position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+    }
+    .hero-orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(110px); opacity: 0.18;
+    }
+    .orb1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #6c63ff, transparent 70%);
+      top: -120px; left: -100px;
+    }
+    .orb2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #38bdf8, transparent 70%);
+      top: 30vh; right: -80px;
+    }
+    .orb3 {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, #a78bfa, transparent 70%);
+      bottom: -100px; left: 30%;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 70% 70% at 50% 40%, black, transparent);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.25);
+      border-radius: 99px; padding: 6px 14px;
+      font-family: 'Outfit', sans-serif; font-size: 0.8rem; font-weight: 500;
+      color: var(--accent2); margin-bottom: 24px;
+    }
+    .badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent2);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 900; line-height: 1.1; color: #fff;
+      margin-bottom: 22px;
+    }
+    .title-line { display: block; color: var(--text-muted); font-size: 0.55em; font-weight: 400; margin-bottom: 8px; letter-spacing: 0; }
+    .title-accent {
+      display: block;
+      background: linear-gradient(135deg, #fff 0%, var(--accent2) 60%, var(--accent3) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-desc {
+      font-size: 1.05rem; color: var(--text-muted); line-height: 1.8;
+      margin-bottom: 36px; max-width: 480px;
+    }
+    .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
+    .hero-stats {
+      display: flex; align-items: center; gap: 0;
+    }
+    .stat-item {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Outfit', sans-serif; font-size: 0.83rem; font-weight: 500; color: var(--text-muted);
+      padding: 0 20px;
+    }
+    .stat-item:first-child { padding-left: 0; }
+    .stat-icon { font-size: 1rem; }
+    .stat-divider { width: 1px; height: 20px; background: var(--border); }
+
+    /* ─── HERO VISUAL ─── */
+    .hero-visual {
+      display: flex; justify-content: center; align-items: center;
+    }
+    .app-mockup {
+      position: relative; max-width: 340px;
+      animation: float 6s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-16px); }
+    }
+    .mockup-glow {
+      position: absolute; inset: -20px;
+      background: radial-gradient(ellipse at center, rgba(108,99,255,0.35), transparent 70%);
+      border-radius: 50%; filter: blur(20px); z-index: -1;
+    }
+    .mockup-img {
+      width: 100%; border-radius: var(--radius-xl);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08);
+    }
+
+    /* ─── FEATURES ─── */
+    .features { padding: 110px 0; background: var(--bg); }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .feature-card--large { grid-column: span 2; }
+
+    .feature-card {
+      position: relative; overflow: hidden;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      cursor: default;
+    }
+    .feature-card-bg {
+      position: absolute; inset: 0; opacity: 0;
+      background: radial-gradient(ellipse at 20% 20%, rgba(108,99,255,0.12), transparent 60%);
+      transition: opacity var(--transition);
+      pointer-events: none;
+    }
+    .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 48px rgba(0,0,0,0.45); border-color: rgba(108,99,255,0.3); }
+    .feature-card:hover .feature-card-bg { opacity: 1; }
+
+    .feature-icon-wrap {
+      width: 52px; height: 52px; border-radius: var(--radius-md);
+      background: rgba(108,99,255,0.12); border: 1px solid rgba(108,99,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; margin-bottom: 22px;
+    }
+    .feature-title {
+      font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700;
+      color: #fff; margin-bottom: 12px;
+    }
+    .feature-desc { font-size: 0.93rem; color: var(--text-muted); line-height: 1.75; margin-bottom: 18px; }
+    .feature-list {
+      list-style: none; display: flex; flex-direction: column; gap: 8px;
+    }
+    .feature-list li {
+      font-size: 0.87rem; color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .feature-list li::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent2); flex-shrink: 0;
+    }
+
+    /* ─── SCREENSHOTS ─── */
+    .screenshots { padding: 100px 0; background: var(--bg2); overflow: hidden; }
+    .screenshots-track {
+      display: flex; gap: 20px; overflow-x: auto; padding: 16px 24px 24px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin; scrollbar-color: var(--surface) transparent;
+    }
+    .screenshots-track::-webkit-scrollbar { height: 4px; }
+    .screenshots-track::-webkit-scrollbar-thumb { background: var(--surface); border-radius: 99px; }
+
+    .screenshot-item {
+      flex-shrink: 0; border-radius: var(--radius-lg);
+      overflow: hidden; scroll-snap-align: start;
+      border: 1px solid var(--border);
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .screenshot-item:hover { transform: scale(1.02); box-shadow: 0 24px 64px rgba(0,0,0,0.6); }
+    .screenshot-item img { height: 340px; width: auto; object-fit: cover; }
+
+    /* ─── AUDIENCE ─── */
+    .audience { padding: 100px 0; background: var(--bg); }
+    .audience-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+    }
+    .audience-card {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px 24px; text-align: center;
+      transition: transform var(--transition), border-color var(--transition);
+    }
+    .audience-card:hover { transform: translateY(-4px); border-color: rgba(108,99,255,0.3); }
+    .audience-emoji { font-size: 2.4rem; margin-bottom: 16px; }
+    .audience-card h3 {
+      font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700;
+      color: #fff; margin-bottom: 8px;
+    }
+    .audience-card p { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* ─── REQUIREMENTS ─── */
+    .requirements { padding: 80px 0; background: var(--bg2); }
+    .req-card {
+      max-width: 760px; margin: 0 auto;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 52px 56px; text-align: center;
+    }
+    .req-icon { font-size: 2.8rem; margin-bottom: 18px; }
+    .req-title {
+      font-family: 'Outfit', sans-serif; font-size: 1.7rem; font-weight: 800;
+      color: #fff; margin-bottom: 36px;
+    }
+    .req-list { display: flex; flex-direction: column; gap: 0; text-align: left; }
+    .req-item {
+      display: flex; gap: 24px; align-items: flex-start;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+    }
+    .req-label {
+      font-family: 'Outfit', sans-serif; font-size: 0.87rem; font-weight: 600;
+      color: var(--accent2); width: 130px; flex-shrink: 0; padding-top: 2px;
+    }
+    .req-value { font-size: 0.93rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* ─── CTA SECTION ─── */
+    .cta-section {
+      padding: 120px 0; text-align: center; position: relative; overflow: hidden;
+      background: var(--bg);
+    }
+    .cta-bg { position: absolute; inset: 0; pointer-events: none; }
+    .cta-orb {
+      position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.2;
+    }
+    .cta-orb1 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, var(--accent), transparent 70%);
+      top: -100px; left: 50%; transform: translateX(-50%);
+    }
+    .cta-orb2 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, var(--accent3), transparent 70%);
+      bottom: -60px; left: 60%;
+    }
+    .cta-content { position: relative; z-index: 1; }
+    .cta-title {
+      font-family: 'Outfit', sans-serif; font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 900; color: #fff; margin-bottom: 16px;
+    }
+    .cta-desc { font-size: 1.05rem; color: var(--text-muted); margin-bottom: 44px; line-height: 1.8; }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      padding: 32px 0; border-top: 1px solid var(--border); background: var(--bg);
+    }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    .footer-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Outfit', sans-serif; font-size: 1.05rem; font-weight: 800; color: #fff;
+    }
+    .footer-copy { font-size: 0.83rem; color: var(--text-muted); }
+    .footer-link {
+      font-family: 'Outfit', sans-serif; font-size: 0.85rem; font-weight: 500;
+      color: var(--accent2); transition: color var(--transition);
+    }
+    .footer-link:hover { color: #fff; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1024px) {
+      .hero { grid-template-columns: 1fr; text-align: center; padding: 120px 24px 80px; gap: 48px; }
+      .hero-desc { margin: 0 auto 36px; }
+      .hero-cta { justify-content: center; }
+      .hero-stats { justify-content: center; }
+      .hero-visual { order: -1; }
+      .app-mockup { max-width: 260px; }
+      .features-grid { grid-template-columns: 1fr 1fr; }
+      .feature-card--large { grid-column: span 2; }
+      .audience-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 700px) {
+      .nav-links { display: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .feature-card--large { grid-column: span 1; }
+      .audience-grid { grid-template-columns: 1fr 1fr; }
+      .req-card { padding: 36px 24px; }
+      .req-item { flex-direction: column; gap: 4px; }
+      .req-label { width: auto; }
+      .footer-inner { flex-direction: column; align-items: center; text-align: center; }
+    }
+    @media (max-width: 480px) {
+      .audience-grid { grid-template-columns: 1fr; }
+      .stat-item:nth-child(4), .stat-divider:nth-child(3) { display: none; }
+    }
+
+    /* ─── ANIMATIONS ─── */
+    .reveal {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAVBAR ══ -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">
+        <span class="logo-icon">🌑</span>
+        <span class="logo-text">Dark Calendar</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">기능</a></li>
+        <li><a href="#screenshots">스크린샷</a></li>
+        <li><a href="#requirements">시스템 요구사항</a></li>
+      </ul>
+      <a href="https://apps.microsoft.com/detail/9MXQ08RF22K8?hl=ko-kr&gl=KR&ocid=pdpshare"
+         target="_blank" rel="noopener" class="btn btn-nav" id="nav-store-btn">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M0 0h7.5v7.5H0V0zm8.5 0H16v7.5H8.5V0zM0 8.5h7.5V16H0V8.5zm8.5 0H16V16H8.5V8.5z"/>
+        </svg>
+        Microsoft Store
+      </a>
+    </div>
+  </nav>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero" id="hero">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="hero-orb orb1"></div>
+      <div class="hero-orb orb2"></div>
+      <div class="hero-orb orb3"></div>
+      <div class="hero-grid"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="hero-badge reveal">
+        <span class="badge-dot"></span>
+        Windows 전용 앱 &nbsp;·&nbsp; Microsoft Store
+      </div>
+      <h1 class="hero-title reveal reveal-delay-1">
+        <span class="title-line">캘린더를 열 필요 없이</span>
+        <span class="title-accent">일정이 항상<br/>바탕화면에</span>
+      </h1>
+      <p class="hero-desc reveal reveal-delay-2">
+        Dark Calendar는 바탕화면 위에 조용히 자리 잡는 오버레이 캘린더 앱입니다.<br/>
+        다른 창을 가리지 않으면서도 항상 화면에 표시됩니다.
+      </p>
+      <div class="hero-cta reveal reveal-delay-3">
+        <a href="https://apps.microsoft.com/detail/9MXQ08RF22K8?hl=ko-kr&gl=KR&ocid=pdpshare"
+           target="_blank" rel="noopener" class="btn btn-primary" id="hero-store-btn">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M0 0h7.5v7.5H0V0zm8.5 0H16v7.5H8.5V0zM0 8.5h7.5V16H0V8.5zm8.5 0H16V16H8.5V8.5z"/>
+          </svg>
+          Microsoft Store에서 다운로드
+        </a>
+        <a href="#features" class="btn btn-secondary" id="hero-learn-btn">기능 살펴보기</a>
+      </div>
+      <div class="hero-stats reveal reveal-delay-4">
+        <div class="stat-item">
+          <span class="stat-icon">🌙</span>
+          <span class="stat-label">완전한 다크 테마</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-icon">📅</span>
+          <span class="stat-label">구글 캘린더 동기화</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-icon">⌨️</span>
+          <span class="stat-label">키보드 중심 UX</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="app-mockup reveal">
+        <div class="mockup-glow" aria-hidden="true"></div>
+        <img
+          src="https://store-images.s-microsoft.com/image/apps.6339.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.2e1a16c1-6468-42ae-b3ef-f4c21d05b771"
+          alt="Dark Calendar 앱 스크린샷"
+          class="mockup-img"
+          loading="eager"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FEATURES ══ -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow reveal">주요 기능</p>
+        <h2 class="section-title reveal reveal-delay-1">작업 흐름을 방해하지 않는<br/>스마트한 일정 관리</h2>
+      </div>
+      <div class="features-grid">
+
+        <div class="feature-card feature-card--large reveal" id="feature-overlay">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">🖥️</div>
+          <h3 class="feature-title">바탕화면 오버레이 캘린더</h3>
+          <p class="feature-desc">
+            항상 표시되지만 다른 창을 가리지 않습니다. 투명 배경으로 바탕화면과 자연스럽게
+            어우러지며, 창 크기와 위치를 자유롭게 조절할 수 있습니다.
+          </p>
+          <ul class="feature-list">
+            <li>다른 앱 창 아래에 항상 표시</li>
+            <li>투명 배경으로 바탕화면과 자연스러운 조화</li>
+            <li>멀티 모니터 환경 완벽 지원</li>
+            <li>창 크기 · 위치 자유 조절</li>
+          </ul>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-1" id="feature-google">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">📅</div>
+          <h3 class="feature-title">구글 캘린더 실시간 동기화</h3>
+          <p class="feature-desc">
+            구글 캘린더와 자동으로 동기화됩니다. 백그라운드에서 조용히 갱신되며,
+            오프라인에서도 로컬 데이터로 정상 작동합니다.
+          </p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-2" id="feature-todo">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">✅</div>
+          <h3 class="feature-title">할 일 &amp; 지시사항 관리</h3>
+          <p class="feature-desc">
+            캘린더 일정 외에 별도의 할 일 목록을 관리하세요. 마감일 · 우선순위 · 색상 태그로
+            체계적으로 분류하고, 단축키로 빠르게 추가 · 수정 · 삭제합니다.
+          </p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-3" id="feature-dark">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">🌙</div>
+          <h3 class="feature-title">다크 테마 디자인</h3>
+          <p class="feature-desc">
+            눈의 피로를 줄이는 세련된 다크 UI. 폰트 크기와 UI 밀도를 조절할 수 있어
+            장시간 작업 환경에 최적화되어 있습니다.
+          </p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-4" id="feature-keyboard">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">⌨️</div>
+          <h3 class="feature-title">키보드 중심 UX</h3>
+          <p class="feature-desc">
+            마우스 없이 대부분의 기능을 사용할 수 있습니다. ESC · Del · Ctrl+클릭 등
+            직관적인 단축키를 지원합니다.
+          </p>
+        </div>
+
+        <div class="feature-card reveal reveal-delay-1" id="feature-lock">
+          <div class="feature-card-bg" aria-hidden="true"></div>
+          <div class="feature-icon-wrap" aria-hidden="true">🔒</div>
+          <h3 class="feature-title">잠금 모드</h3>
+          <p class="feature-desc">
+            자리를 비울 때 일정 내용을 보호합니다. 잠금 상태에서는 모든 조작이 차단되어
+            개인 정보를 안전하게 지킵니다.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ SCREENSHOTS ══ -->
+  <section class="screenshots" id="screenshots">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow reveal">스크린샷</p>
+        <h2 class="section-title reveal reveal-delay-1">실제 앱 모습</h2>
+      </div>
+    </div>
+    <div class="screenshots-track">
+      <div class="screenshot-item reveal" id="screenshot-1">
+        <img src="https://store-images.s-microsoft.com/image/apps.58242.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.50671c2c-767a-44e6-b7a3-3c901019b27b"
+             alt="Dark Calendar — 화면 전체 모습" loading="lazy" />
+      </div>
+      <div class="screenshot-item reveal reveal-delay-1" id="screenshot-2">
+        <img src="https://store-images.s-microsoft.com/image/apps.10818.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.16594fb5-b63e-490b-8a4e-f2e1aa59372f"
+             alt="Dark Calendar — 멀티 모니터 모습" loading="lazy" />
+      </div>
+      <div class="screenshot-item reveal reveal-delay-2" id="screenshot-3">
+        <img src="https://store-images.s-microsoft.com/image/apps.21488.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.361eda91-462a-4c07-abba-8ebbc8ac066f"
+             alt="Dark Calendar — 클로즈업" loading="lazy" />
+      </div>
+      <div class="screenshot-item reveal reveal-delay-3" id="screenshot-4">
+        <img src="https://store-images.s-microsoft.com/image/apps.37846.13885522657696393.750afa40-30a6-4d75-bf54-05bcff66a853.103b317e-3a44-45e5-8aa1-585b96ed626b"
+             alt="Dark Calendar — 할 일 관리" loading="lazy" />
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ AUDIENCE ══ -->
+  <section class="audience" id="audience">
+    <div class="container">
+      <div class="section-header">
+        <p class="section-eyebrow reveal">이런 분께 추천합니다</p>
+        <h2 class="section-title reveal reveal-delay-1">당신의 일정 관리 방식을<br/>업그레이드하세요</h2>
+      </div>
+      <div class="audience-grid">
+        <div class="audience-card reveal" id="audience-worker">
+          <div class="audience-emoji">💼</div>
+          <h3>멀티태스킹 직장인</h3>
+          <p>작업 중에도 일정을 항상 확인하고 싶은 분</p>
+        </div>
+        <div class="audience-card reveal reveal-delay-1" id="audience-google">
+          <div class="audience-emoji">🗓️</div>
+          <h3>구글 캘린더 헤비유저</h3>
+          <p>구글 캘린더를 주로 사용하는 분</p>
+        </div>
+        <div class="audience-card reveal reveal-delay-2" id="audience-dev">
+          <div class="audience-emoji">👨‍💻</div>
+          <h3>개발자 · 디자이너</h3>
+          <p>깔끔한 다크 UI를 선호하는 분</p>
+        </div>
+        <div class="audience-card reveal reveal-delay-3" id="audience-focus">
+          <div class="audience-emoji">🎯</div>
+          <h3>집중력 중시형</h3>
+          <p>멀티태스킹 중에도 일정을 놓치고 싶지 않은 분</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ REQUIREMENTS ══ -->
+  <section class="requirements" id="requirements">
+    <div class="container">
+      <div class="req-card reveal">
+        <div class="req-icon" aria-hidden="true">🖥️</div>
+        <h2 class="req-title">시스템 요구사항</h2>
+        <div class="req-list">
+          <div class="req-item">
+            <span class="req-label">운영체제</span>
+            <span class="req-value">Windows 10 버전 1903 이상 / Windows 11</span>
+          </div>
+          <div class="req-item">
+            <span class="req-label">인터넷 연결</span>
+            <span class="req-value">구글 캘린더 동기화 시 필요 (오프라인 로컬 모드 지원)</span>
+          </div>
+          <div class="req-item">
+            <span class="req-label">구글 계정</span>
+            <span class="req-value">선택 사항 — 구글 계정 없이 로컬 모드 사용 가능</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CTA ══ -->
+  <section class="cta-section" id="cta">
+    <div class="cta-bg" aria-hidden="true">
+      <div class="cta-orb cta-orb1"></div>
+      <div class="cta-orb cta-orb2"></div>
+    </div>
+    <div class="container">
+      <div class="cta-content reveal">
+        <h2 class="cta-title">지금 바로 시작하세요</h2>
+        <p class="cta-desc">
+          캘린더를 열고 닫는 반복 없이,<br/>
+          일정은 언제나 당신의 바탕화면에 있습니다.
+        </p>
+        <a href="https://apps.microsoft.com/detail/9MXQ08RF22K8?hl=ko-kr&gl=KR&ocid=pdpshare"
+           target="_blank" rel="noopener" class="btn btn-primary btn-large" id="cta-store-btn">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M0 0h7.5v7.5H0V0zm8.5 0H16v7.5H8.5V0zM0 8.5h7.5V16H0V8.5zm8.5 0H16V16H8.5V8.5z"/>
+          </svg>
+          Microsoft Store에서 다운로드
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══ -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-logo">
+          <span class="logo-icon">🌑</span>
+          <span class="logo-text">Dark Calendar</span>
+        </div>
+        <p class="footer-copy">© 2025 Kim Hyojin. All rights reserved.</p>
+        <a href="https://apps.microsoft.com/detail/9MXQ08RF22K8?hl=ko-kr&gl=KR&ocid=pdpshare"
+           target="_blank" rel="noopener" class="footer-link">
+          Microsoft Store 페이지 →
+        </a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ── Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // ── Scroll reveal
+    const revealEls = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    revealEls.forEach(el => observer.observe(el));
+
+    // ── Smooth anchor scroll (for older browsers)
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', e => {
+        const target = document.querySelector(anchor.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
