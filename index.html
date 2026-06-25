@@ -45,6 +45,8 @@
     body[data-lang="en"] { font-family: 'Outfit', sans-serif; }
     body[data-lang="ja"] { font-family: 'Noto Sans JP', 'Outfit', sans-serif; }
     body[data-lang="zh"] { font-family: 'Noto Sans SC', 'Outfit', sans-serif; }
+    body[data-lang="ja"] .hero-title,
+    body[data-lang="ja"] .hero-desc { word-break: auto-phrase; }
 
     a { color: inherit; text-decoration: none; }
     img { max-width: 100%; display: block; }
@@ -193,7 +195,7 @@
     .stat-item {
       display: flex; align-items: center; gap: 8px;
       font-family: 'Outfit', sans-serif; font-size: 0.83rem; font-weight: 500; color: var(--text-muted);
-      padding: 0 20px;
+      padding: 0 20px; white-space: nowrap;
     }
     .stat-item:first-child { padding-left: 0; }
     .stat-icon { font-size: 1rem; }
@@ -1018,10 +1020,12 @@
 
         <!-- store URL -->
         <label class="admin-label" for="adminStoreUrlInput" style="margin-top:10px">🏪 스토어 버튼 URL (네비게이션 &amp; 하단 CTA)</label>
-        <div class="admin-row">
+        <div class="admin-row" style="margin-bottom:12px">
           <input class="admin-input" id="adminStoreUrlInput" type="url" placeholder="https://apps.microsoft.com/detail/..." />
-          <button class="admin-btn admin-btn-primary" id="adminSave">저장</button>
         </div>
+
+        <!-- save all -->
+        <button class="admin-btn admin-btn-primary" id="adminSave" style="width:100%">💾 URL 저장</button>
 
         <!-- share link -->
         <button class="admin-btn admin-btn-secondary" id="adminGenShare" style="width:100%;margin-bottom:0">
@@ -1190,7 +1194,7 @@
       'nav.store': 'Microsoft Store',
       'hero.badge': '🎁 先着1,000名様限定 無料プレゼント実施中！',
       'hero.title.line': 'カレンダーを開く必要なし',
-      'hero.title.accent': 'スケジュールが常に<br/>デスクトップに',
+      'hero.title.accent': 'スケジュールが常にデスクトップに',
       'hero.desc': 'Dark Calendarはデスクトップの上に静かに配置されるオーバーレイカレンダーアプリです。<br/>他のウィンドウを遮らず、常に画面に表示されます。',
       'hero.btn.store': 'Microsoft Storeでダウンロード',
       'hero.btn.learn': '機能を見る',
@@ -1552,6 +1556,15 @@
 
   document.getElementById('popupClose').addEventListener('click', closePromo);
   promoOverlay.addEventListener('click', e => { if (e.target === promoOverlay) closePromo(); });
+
+  // Hero badge click → reopen popup if enabled
+  const heroBadgeEl = document.querySelector('.hero-badge');
+  if (heroBadgeEl) {
+    heroBadgeEl.style.cursor = isPopupEnabled() ? 'pointer' : '';
+    heroBadgeEl.addEventListener('click', () => {
+      if (isPopupEnabled()) openPromo();
+    });
+  }
 
   // Show popup after 1.2s if enabled and not dismissed
   setTimeout(() => {
