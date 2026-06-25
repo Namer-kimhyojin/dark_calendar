@@ -1011,9 +1011,15 @@
         </div>
 
         <!-- promo URL -->
-        <label class="admin-label" for="adminUrlInput">프로모션 URL (Microsoft Store 링크)</label>
-        <div class="admin-row">
+        <label class="admin-label" for="adminUrlInput">🎁 프로모션 팝업 URL</label>
+        <div class="admin-row" style="margin-bottom:6px">
           <input class="admin-input" id="adminUrlInput" type="url" placeholder="https://apps.microsoft.com/detail/..." />
+        </div>
+
+        <!-- store URL -->
+        <label class="admin-label" for="adminStoreUrlInput" style="margin-top:10px">🏪 스토어 버튼 URL (네비게이션 &amp; 하단 CTA)</label>
+        <div class="admin-row">
+          <input class="admin-input" id="adminStoreUrlInput" type="url" placeholder="https://apps.microsoft.com/detail/..." />
           <button class="admin-btn admin-btn-primary" id="adminSave">저장</button>
         </div>
 
@@ -1404,11 +1410,23 @@
   // ─── PROMO POPUP ────────────────────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════════════
   const STORE_DEFAULT = 'https://apps.microsoft.com/detail/9MXQ08RF22K8?hl=ko-kr&gl=KR&ocid=pdpshare';
-  const LS_PW    = 'dc-admin-pw';
-  const LS_URL   = 'dc-promo-url';
-  const LS_ON    = 'dc-promo-on';
-  const LS_HIDE  = 'dc-promo-hide';
-  const DEFAULT_PW = 'dark2025';
+  const LS_PW        = 'dc-admin-pw';
+  const LS_URL       = 'dc-promo-url';
+  const LS_STORE_URL = 'dc-store-url';
+  const LS_ON        = 'dc-promo-on';
+  const LS_HIDE      = 'dc-promo-hide';
+  const DEFAULT_PW   = 'dark2025';
+
+  // Apply store URL to nav + CTA buttons
+  function applyStoreUrl(url) {
+    const href = url || STORE_DEFAULT;
+    const targets = ['nav-store-btn', 'cta-store-btn'];
+    targets.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.href = href;
+    });
+  }
+  // On page load, apply stored store URL (called after ls() is defined below)
 
   // Popup i18n strings (added on top of main t object)
   const popupI18n = {
@@ -1471,6 +1489,9 @@
       else localStorage.setItem(key, val);
     } catch(e) {}
   }
+
+  // On page load, apply stored store URL
+  applyStoreUrl(ls(LS_STORE_URL));
 
   function getPromoUrl() {
     // Priority: URL param ?p= > localStorage > default
@@ -1557,7 +1578,8 @@
     adminAuth.style.display = 'none';
     adminMain.style.display = 'block';
     // populate fields
-    document.getElementById('adminUrlInput').value = ls(LS_URL) || STORE_DEFAULT;
+    document.getElementById('adminUrlInput').value      = ls(LS_URL) || STORE_DEFAULT;
+    document.getElementById('adminStoreUrlInput').value = ls(LS_STORE_URL) || STORE_DEFAULT;
     document.getElementById('adminToggle').checked = isPopupEnabled();
     document.getElementById('adminShareBox').classList.remove('visible');
   }
@@ -1577,13 +1599,19 @@
 
   // Save URL + toggle
   document.getElementById('adminSave').addEventListener('click', () => {
-    const url = document.getElementById('adminUrlInput').value.trim();
-    const on  = document.getElementById('adminToggle').checked;
-    if (url && !url.startsWith('http')) {
-      showMsg(adminMsg, 'URL은 http:// 또는 https://로 시작해야 합니다.', 'error'); return;
+    const promoUrl = document.getElementById('adminUrlInput').value.trim();
+    const storeUrl = document.getElementById('adminStoreUrlInput').value.trim();
+    const on       = document.getElementById('adminToggle').checked;
+    if (promoUrl && !promoUrl.startsWith('http')) {
+      showMsg(adminMsg, '프로모션 URL은 http:// 또는 https://로 시작해야 합니다.', 'error'); return;
     }
-    ls(LS_URL, url || STORE_DEFAULT);
-    ls(LS_ON,  on ? '1' : '0');
+    if (storeUrl && !storeUrl.startsWith('http')) {
+      showMsg(adminMsg, '스토어 URL은 http:// 또는 https://로 시작해야 합니다.', 'error'); return;
+    }
+    ls(LS_URL,       promoUrl || STORE_DEFAULT);
+    ls(LS_STORE_URL, storeUrl || STORE_DEFAULT);
+    ls(LS_ON,        on ? '1' : '0');
+    applyStoreUrl(storeUrl || STORE_DEFAULT);
     showMsg(adminMsg, '✅ 저장되었습니다!', 'success');
   });
 
