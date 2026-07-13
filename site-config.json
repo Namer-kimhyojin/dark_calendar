@@ -1,0 +1,15 @@
+{
+  "appName": "Dark Calendar",
+  "microsoftStoreUrl": "https://apps.microsoft.com/detail/9mxq08rf22k8?hl=ko-KR&gl=KR&ocid=pdpshare",
+  "eventUrl": "https://account.microsoft.com/billing/redeem?mstoken=FXJK9-Y7MKP-KX97V-CTHRK-X2MMZ",
+  "event": {
+    "enabled": true,
+    "label": "기간 한정 이벤트",
+    "title": "Dark Calendar 이벤트 안내",
+    "description": "이벤트 코드를 Microsoft 계정에 등록할 수 있습니다.",
+    "buttonText": "이벤트 코드 등록하기",
+    "note": "이벤트 종료 후에는 코드 등록 링크가 제공되지 않습니다."
+  },
+  "supportEmail": "",
+  "githubPagesBasePath": ""
+}
